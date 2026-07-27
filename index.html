@@ -39,7 +39,7 @@ body{font-family:var(--sans);background:var(--cream);color:var(--txt)}
 .dot.active{border-color:var(--goldlight);box-shadow:0 0 0 1px var(--gold)}
 .bgbtn{display:flex;align-items:center;gap:6px;font-size:11px;color:rgba(232,212,160,0.65);cursor:pointer;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.06);transition:background .2s;margin-top:5px}
 .bgbtn:hover{background:rgba(201,169,97,0.15)}
-.main{flex:1;padding:26px 32px;overflow-y:auto;min-width:0;position:relative;background:var(--cream)}
+.main{flex:1;padding:26px 32px;overflow-y:auto;min-width:0;position:relative;background:rgba(250,245,240,0.82)}
 .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:12px}
 .topbar h2{font-family:var(--serif);font-size:28px;font-weight:400;color:var(--ink);letter-spacing:-0.5px;display:flex;align-items:baseline;gap:10px}
 .topbar h2 .ico{font-size:24px}
@@ -397,7 +397,7 @@ function defaultTasks(){return[{id:1,text:'坚持吃早饭',completed:false,cat:
 function setTheme(t){const th=themes[t];if(!th)return;data.theme=t;const s=document.documentElement.style;Object.entries(th).forEach(([k,v])=>s.setProperty('--'+k,v));s.setProperty('--line','rgba(201,169,97,0.28)');s.setProperty('--line2','rgba(42,37,32,0.08)');s.setProperty('--red','#c62828');s.setProperty('--green','#2e7d32');document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',Object.keys(themes)[i]===t));save();}
 function changeBg(i){if(!i.files||!i.files[0])return;const r=new FileReader();r.onload=e=>{data.bg=e.target.result;applyBg(e.target.result);save();toast('✅ 背景图已更新！');};r.onerror=()=>toast('❌ 图片读取失败');r.readAsDataURL(i.files[0]);i.value='';}
 function clearBg(){data.bg='';applyBg('');save();toast('🚫 背景已清除');}
-function applyBg(u){const b=document.getElementById('bg');if(u){b.style.backgroundImage='url('+u+')';b.style.opacity='0.18';}else{b.style.backgroundImage='';b.style.opacity='0';}}
+function applyBg(u){const b=document.getElementById('bg');if(u){b.style.backgroundImage='url('+u+')';b.style.opacity='0.25';}else{b.style.backgroundImage='';b.style.opacity='0';}}
 function saveNote(k,v){data.notes[k]=v;save();}
 function updateBadge(){const n=data.tasks.filter(t=>!t.completed).length;const b=document.getElementById('badge');if(b)b.textContent=n;}
 function showPage(p,el){document.querySelectorAll('#nav li').forEach(i=>i.classList.remove('active'));if(el)el.classList.add('active');else document.querySelector('#nav li[data-page="'+p+'"]')?.classList.add('active');document.getElementById('main').innerHTML='';if(p==='plan')renderPlan();else if(p==='novel')renderNovel();else if(p==='video')renderVideo();else if(p==='stock')renderStock();else if(p==='finance')renderFinance();else if(p==='outfit')renderOutfit();else if(p==='calendar')renderCalendar();else if(p==='advice')renderAdvice();else if(p==='feedback')renderFeedback();updateBadge();if(window.innerWidth<=820)toggleSidebar(false);}

@@ -16,7 +16,7 @@
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{font-family:var(--sans);background:var(--cream);color:var(--txt)}
-#bg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.10}
+#bg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:0;transition:opacity .5s}
 #app{display:flex;height:100vh}
 .sidebar{width:264px;min-width:264px;height:100%;background:linear-gradient(180deg,#5a1f1f 0%,#7a2e2e 100%);color:var(--cream);padding:30px 20px;display:flex;flex-direction:column;box-shadow:var(--shadow);z-index:100;overflow-y:auto;transition:transform .3s}
 .profile{display:flex;align-items:center;gap:13px;margin-bottom:30px;padding-bottom:24px;border-bottom:1px solid rgba(201,169,97,0.3)}
@@ -395,9 +395,9 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function toggleSidebar(force){const s=document.getElementById('sidebar'),o=document.getElementById('moverlay');const open=typeof force==='boolean'?force:!s.classList.contains('open');s.classList.toggle('open',open);o.classList.toggle('show',open);}
 function defaultTasks(){return[{id:1,text:'坚持吃早饭',completed:false,cat:'日常'},{id:2,text:'复盘今日股票操作',completed:false,cat:'投资'},{id:3,text:'每日单位工作',completed:false,cat:'工作'}];}
 function setTheme(t){const th=themes[t];if(!th)return;data.theme=t;const s=document.documentElement.style;Object.entries(th).forEach(([k,v])=>s.setProperty('--'+k,v));s.setProperty('--line','rgba(201,169,97,0.28)');s.setProperty('--line2','rgba(42,37,32,0.08)');s.setProperty('--red','#c62828');s.setProperty('--green','#2e7d32');document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',Object.keys(themes)[i]===t));save();}
-function changeBg(i){if(!i.files[0])return;const r=new FileReader();r.onload=e=>{data.bg=e.target.result;applyBg(e.target.result);save();};r.readAsDataURL(i.files[0]);}
-function clearBg(){data.bg='';applyBg('');save();}
-function applyBg(u){const b=document.getElementById('bg');if(u){b.style.backgroundImage='url('+u+')';b.style.opacity='0.10';}else{b.style.backgroundImage='';b.style.opacity='0';}}
+function changeBg(i){if(!i.files||!i.files[0])return;const r=new FileReader();r.onload=e=>{data.bg=e.target.result;applyBg(e.target.result);save();toast('✅ 背景图已更新！');};r.onerror=()=>toast('❌ 图片读取失败');r.readAsDataURL(i.files[0]);i.value='';}
+function clearBg(){data.bg='';applyBg('');save();toast('🚫 背景已清除');}
+function applyBg(u){const b=document.getElementById('bg');if(u){b.style.backgroundImage='url('+u+')';b.style.opacity='0.18';}else{b.style.backgroundImage='';b.style.opacity='0';}}
 function saveNote(k,v){data.notes[k]=v;save();}
 function updateBadge(){const n=data.tasks.filter(t=>!t.completed).length;const b=document.getElementById('badge');if(b)b.textContent=n;}
 function showPage(p,el){document.querySelectorAll('#nav li').forEach(i=>i.classList.remove('active'));if(el)el.classList.add('active');else document.querySelector('#nav li[data-page="'+p+'"]')?.classList.add('active');document.getElementById('main').innerHTML='';if(p==='plan')renderPlan();else if(p==='novel')renderNovel();else if(p==='video')renderVideo();else if(p==='stock')renderStock();else if(p==='finance')renderFinance();else if(p==='outfit')renderOutfit();else if(p==='calendar')renderCalendar();else if(p==='advice')renderAdvice();else if(p==='feedback')renderFeedback();updateBadge();if(window.innerWidth<=820)toggleSidebar(false);}

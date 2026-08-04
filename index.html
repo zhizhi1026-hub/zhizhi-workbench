@@ -400,7 +400,7 @@ function clearBg(){data.bg='';applyBg('');save();toast('🚫 背景已清除');}
 function applyBg(u){const b=document.getElementById('bg');if(u){b.style.backgroundImage='url('+u+')';b.style.opacity='0.25';}else{b.style.backgroundImage='';b.style.opacity='0';}}
 function saveNote(k,v){data.notes[k]=v;save();}
 function updateBadge(){const n=data.tasks.filter(t=>!t.completed).length;const b=document.getElementById('badge');if(b)b.textContent=n;}
-function showPage(p,el){document.querySelectorAll('#nav li').forEach(i=>i.classList.remove('active'));if(el)el.classList.add('active');else document.querySelector('#nav li[data-page="'+p+'"]')?.classList.add('active');document.getElementById('main').innerHTML='';if(p==='plan')renderPlan();else if(p==='novel')renderNovel();else if(p==='video')renderVideo();else if(p==='stock')renderStock();else if(p==='finance')renderFinance();else if(p==='outfit')renderOutfit();else if(p==='calendar')renderCalendar();else if(p==='advice')renderAdvice();else if(p==='feedback')renderFeedback();updateBadge();if(window.innerWidth<=820)toggleSidebar(false);}
+function showPage(p,el){if(window._stockTimer){clearInterval(window._stockTimer);window._stockTimer=null;}document.querySelectorAll('#nav li').forEach(i=>i.classList.remove('active'));if(el)el.classList.add('active');else document.querySelector('#nav li[data-page="'+p+'"]')?.classList.add('active');document.getElementById('main').innerHTML='';if(p==='plan')renderPlan();else if(p==='novel')renderNovel();else if(p==='video')renderVideo();else if(p==='stock')renderStock();else if(p==='finance')renderFinance();else if(p==='outfit')renderOutfit();else if(p==='calendar')renderCalendar();else if(p==='advice')renderAdvice();else if(p==='feedback')renderFeedback();updateBadge();if(window.innerWidth<=820)toggleSidebar(false);}
 
 // ===== 每日计划 =====
 function renderPlan(){const done=data.tasks.filter(t=>t.completed).length,total=data.tasks.length,pct=total?Math.round(done/total*100):0;document.getElementById('main').innerHTML='<div class="topbar"><div><h2><span class="ico">📝</span>每日计划<small>'+dateStr()+' · 每日0点自动重置</small></h2></div><div class="btns"><button class="btn btn-sec btn-sm" onclick="resetTasks()">重置完成</button></div></div><div class="card"><div class="pbox"><div class="pcircle" style="--pct:'+pct+'%"><span>'+pct+'%</span></div><div class="pinfo"><h4>今日进度 · '+done+'/'+total+' 完成</h4><p>完成一项打勾，点击文字可直接编辑任务</p><div class="pbar"><div class="pfill" style="width:'+pct+'%"></div></div></div></div></div><div class="card"><div class="card-title">每日任务清单<span class="sub">'+done+'/'+total+'</span></div><div class="tlist">'+data.tasks.map(t=>'<div class="task '+(t.completed?'done':'')+'"><div class="chk '+(t.completed?'on':'')+'" onclick="toggleTask('+t.id+')"></div><span class="tcat">'+t.cat+'</span><span class="ttxt" contenteditable="true" onblur="editTask('+t.id+',this.textContent)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}">'+esc(t.text)+'</span><button class="tdel" onclick="delTask('+t.id+')">×</button></div>').join('')+'</div><div class="addrow"><input id="newTask" placeholder="添加新任务..." onkeypress="if(event.key===\'Enter\')addTask()"><select id="newCat"><option>日常</option><option>投资</option><option>工作</option><option>创作</option><option>穿搭</option><option>自定义</option></select><button onclick="addTask()">添加</button></div></div>';}
@@ -561,20 +561,25 @@ const ZT_TIERS=[{tier:'1板',count:28,color:'t1'},{tier:'2板',count:9,color:'t2
 async function renderFinance(){
  const s=daySeed()+200;
  const accuracy=Math.round(88+rand(s)*12);
- document.getElementById('main').innerHTML='<div class="topbar"><div><h2><span class="ico">💰</span>财经资讯·股票早报<small>'+dateStr()+' · 实时行情+视频+游资视角</small></h2></div><span class="tag">实时抓取</span></div>'+
- '<div class="card"><div class="card-title">📊 大盘实时指数<span class="sub gold">腾讯财经</span></div><div id="indexArea" class="loader">正在获取上证/深证/创业板实时行情...</div></div>'+
+ document.getElementById('main').innerHTML='<div class="topbar"><div><h2><span class="ico">💰</span>财经资讯·股票早报<small>'+dateStr()+' · 实时行情+视频+游资视角</small></h2></div><span class="tag" id="refreshTag" onclick="refreshAllStock()" style="cursor:pointer">🔄 点击刷新</span></div>'+
+ '<div class="card"><div class="card-title">📊 大盘实时指数<span class="sub gold">腾讯财经 · 自动刷新</span></div><div id="indexArea" class="loader">正在获取上证/深证/创业板实时行情...</div><div class="hint" style="margin-top:8px;text-align:center" id="indexTime">--</div></div>'+
+ '<div class="card"><div class="card-title">🔥 涨停梯队<span class="sub gold">实时数据</span></div><div id="ztTierArea" class="loader">正在获取实时涨停数据...</div></div>'+
+ '<div class="card"><div class="card-title">🐉 当日龙头·实时涨停<span class="sub gold">实时抓取</span></div><div id="stockListArea" class="loader">正在获取实时涨停股...</div></div>'+
+ '<div class="card"><div class="card-title">📈 板块涨跌图<span class="sub">实时数据</span></div><div id="heatmapArea" class="loader">正在获取板块数据...</div></div>'+
  '<div class="card"><div class="bigstat"><div class="num">'+accuracy+'%</div><div class="label">早盘预测准确率</div></div></div>'+
- '<div class="card"><div class="card-title">🔥 涨停梯队<span class="sub gold">游资视角</span></div><div class="zt-tier">'+ZT_TIERS.map(t=>'<div class="zt-badge '+t.color+'"><span class="num">'+t.count+'</span> '+t.tier+'</div>').join('')+'</div><div class="hint">📊 涨停梯队反映市场情绪：高位连板多=情绪高潮，低位首板多=情绪冰点</div></div>'+
  '<div class="card"><div class="card-title">🌡️ 市场情绪指标</div><div class="sentiment-bar"><div class="seg s-fear" style="flex:25">恐慌 25%</div><div class="seg s-neutral" style="flex:35">中性 35%</div><div class="seg s-greed" style="flex:40">贪婪 40%</div></div><div class="sentiment-labels"><span>冰点</span><span>中性</span><span>高潮</span></div><div class="hint">💡 当前情绪偏多，但需警惕高位股分歧。建议控制仓位，关注低位补涨方向。</div></div>'+
- '<div class="card"><div class="card-title">🐉 当日龙头<span class="sub gold">游资聚焦</span></div><div class="stock-list">'+shuffle(STOCK_POOL,s+3).slice(0,8).map(st=>'<div class="stock-item"><div><div class="name">'+st.n+'</div><div class="code">'+st.c+' · '+st.ind+'</div></div><div class="right"><div class="pct '+(st.pct>=0?'red':'green')+'">'+(st.pct>=0?'+':'')+st.pct.toFixed(2)+'%</div><div class="info">'+st.info+'</div></div></div>').join('')+'</div></div>'+
- '<div class="card"><div class="card-title">📈 板块涨跌图<span class="sub">面积=涨跌幅</span></div><div class="heatmap">'+shuffle(HEATMAP,s+5).map(h=>'<div class="hcell '+(h.up?'hred':'hgreen')+'" style="opacity:'+(0.35+Math.min(Math.abs(h.v)/6,0.65))+'"><div>'+h.n+'</div><div class="sub">'+(h.up?'+':'')+h.v.toFixed(2)+'%</div></div>').join('')+'</div></div>'+
  '<div class="card"><div class="card-title">🎯 趋势股·短线2-5天</div><div id="trendArea" class="loader">加载中...</div></div>'+
  '<div class="card"><div class="card-title">📰 财经要闻<span class="sub gold">每日更新</span></div><div id="newsArea" class="loader">正在加载财经资讯...</div></div>'+
  '<div class="card"><div class="card-title">📺 今日精选视频<span class="sub gold">每日推荐</span></div><div id="financeVideos" class="loader">正在为你挑选今日推荐视频...</div></div>'+
  '<div class="card"><div class="card-title">📚 股票知识</div>'+shuffle(FINANCE_KNOWLEDGE,s+10).slice(0,3).map(k=>'<div class="knowledge"><h5>💡 '+k.t+'</h5><p>'+k.d+'</p></div>').join('')+'</div>';
  fetchRealIndex();
+ fetchRealZT();
+ fetchRealSectors();
  fetchRealNews();
  fetchDailyVideo('financeVideos','finance');
+ // 启动自动刷新（每15秒）
+ if(window._stockTimer)clearInterval(window._stockTimer);
+ window._stockTimer=setInterval(()=>{fetchRealIndex();},15000);
 }
 
 async function fetchRealIndex(){
@@ -612,6 +617,8 @@ async function fetchRealIndex(){
   if(indices.length){
    el.className='index-row';
    el.innerHTML=indices.map(idx=>'<div class="index-card"><div class="nm">'+idx.name+'</div><div class="val">'+idx.current+'</div><div class="chg '+(idx.up?'up':'down')+'">'+(idx.up?'▲+':'▼')+idx.pct+'%</div></div>').join('');
+   const tEl=document.getElementById('indexTime');
+   if(tEl)tEl.textContent='⏱ 最后更新：'+new Date().toLocaleTimeString('zh-CN')+' · 每15秒自动刷新';
    return;
   }
  }catch(e){console.log('index fetch failed',e);}
@@ -619,6 +626,83 @@ async function fetchRealIndex(){
  el.className='index-row';
  el.innerHTML='<div class="index-card"><div class="nm">上证指数</div><div class="val">--</div><div class="chg">数据获取失败</div></div><div class="index-card"><div class="nm">深证成指</div><div class="val">--</div><div class="chg">点击刷新重试</div></div><div class="index-card"><div class="nm">创业板指</div><div class="val">--</div><div class="chg">网络限制</div></div>';
 }
+
+// 实时涨停股抓取（东方财富涨停股池API）
+async function fetchRealZT(){
+ const elZT=document.getElementById('ztTierArea');
+ const elList=document.getElementById('stockListArea');
+ try{
+  // 东方财富涨停股池接口
+  const url='https://push2ex.eastmoney.com/getTopicZTPool?ut=7eea3edcaed734bea9cb3f8e2d2a18cd&dpt=wz.ztzt&Pageindex=0&pagesize=20&sort=fbt:asc&date='+todayStr2();
+  const res=await Promise.race([fetch(url),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+  const d=await res.json();
+  if(d&&d.data&&d.data.pool&&d.data.pool.length){
+   const pool=d.data.pool;
+   // 按连板数统计涨停梯队
+   const tierCount={1:0,2:0,3:0,4:0,5:0};
+   pool.forEach(s=>{
+    const lb=parseInt(s.lbc)||1;
+    if(lb>=5)tierCount[5]++;
+    else if(lb>=4)tierCount[4]++;
+    else if(lb>=3)tierCount[3]++;
+    else if(lb>=2)tierCount[2]++;
+    else tierCount[1]++;
+   });
+   if(elZT){
+    elZT.className='zt-tier';
+    elZT.innerHTML='<div class="zt-badge t1"><span class="num">'+tierCount[1]+'</span> 1板</div><div class="zt-badge t2"><span class="num">'+tierCount[2]+'</span> 2板</div><div class="zt-badge t3"><span class="num">'+tierCount[3]+'</span> 3板</div><div class="zt-badge t4"><span class="num">'+tierCount[4]+'</span> 4板</div><div class="zt-badge t5"><span class="num">'+tierCount[5]+'</span> 5板+</div><div class="hint" style="width:100%;margin-top:8px">📊 共'+pool.length+'只涨停股 · 高位连板多=情绪高潮，低位首板多=情绪冰点</div>';
+   }
+   // 渲染涨停股列表
+   if(elList){
+    elList.className='stock-list';
+    elList.innerHTML=pool.slice(0,10).map(s=>{
+     const pct=parseFloat(s.zttj&&s.zttj.first!==undefined?s.fund:'0');
+     const lb=parseInt(s.lbc)||1;
+     const name=s.n||'--';const code=s.c||'--';const fund=s.fund?parseFloat(s.fund)/10000:0;
+     return '<div class="stock-item"><div><div class="name">'+esc(name)+'</div><div class="code">'+code+' · '+lb+'连板</div></div><div class="right"><div class="pct red">+'+(s.zttj?Math.abs(s.zttj.zttj_first||10).toFixed(2):'10.00')+'%</div><div class="info">封单'+(fund>0?fund.toFixed(2)+'亿':'--')+'</div></div></div>';
+    }).join('');
+   }
+   return;
+  }
+ }catch(e){console.log('ZT fetch failed',e);}
+ // 回退到静态数据
+ const s=daySeed()+200;
+ if(elZT){elZT.className='zt-tier';elZT.innerHTML=ZT_TIERS.map(t=>'<div class="zt-badge '+t.color+'"><span class="num">'+t.count+'</span> '+t.tier+'</div>').join('')+'<div class="hint" style="width:100%;margin-top:8px">📊 涨停梯队反映市场情绪（离线数据）</div>';}
+ if(elList){elList.className='stock-list';elList.innerHTML=shuffle(STOCK_POOL,s+3).slice(0,8).map(st=>'<div class="stock-item"><div><div class="name">'+st.n+'</div><div class="code">'+st.c+' · '+st.ind+'</div></div><div class="right"><div class="pct '+(st.pct>=0?'red':'green')+'">'+(st.pct>=0?'+':'')+st.pct.toFixed(2)+'%</div><div class="info">'+st.info+'</div></div></div>').join('')+'<div class="hint" style="width:100%">⚠️ 实时数据获取失败，显示离线数据</div>';}
+}
+
+// 实时板块涨跌抓取（东方财富板块API）
+async function fetchRealSectors(){
+ const el=document.getElementById('heatmapArea');
+ if(!el)return;
+ try{
+  // 东方财富行业板块实时涨跌
+  const url='https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=20&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:90+t:2&fields=f2,f3,f12,f14';
+  const res=await Promise.race([fetch(url),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),8000))]);
+  const d=await res.json();
+  if(d&&d.data&&d.data.diff&&d.data.diff.length){
+   const sectors=d.data.diff.map(s=>({n:s.f14,v:parseFloat(s.f3)||0,up:parseFloat(s.f3)>=0})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+   el.className='heatmap';
+   el.innerHTML=sectors.slice(0,18).map(h=>'<div class="hcell '+(h.up?'hred':'hgreen')+'" style="opacity:'+(0.35+Math.min(Math.abs(h.v)/6,0.65))+'"><div>'+esc(h.n)+'</div><div class="sub">'+(h.up?'+':'')+h.v.toFixed(2)+'%</div></div>').join('');
+   return;
+  }
+ }catch(e){console.log('sector fetch failed',e);}
+ // 回退
+ const s=daySeed()+200;
+ el.className='heatmap';
+ el.innerHTML=shuffle(HEATMAP,s+5).map(h=>'<div class="hcell '+(h.up?'hred':'hgreen')+'" style="opacity:'+(0.35+Math.min(Math.abs(h.v)/6,0.65))+'"><div>'+h.n+'</div><div class="sub">'+(h.up?'+':'')+h.v.toFixed(2)+'%</div></div>').join('')+'<div class="hint" style="width:100%;margin-top:8px">⚠️ 实时板块数据获取失败，显示离线数据</div>';
+}
+
+function todayStr2(){const d=new Date();return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
+
+function refreshAllStock(){
+ toast('🔄 正在刷新实时数据...');
+ fetchRealIndex();
+ fetchRealZT();
+ fetchRealSectors();
+}
+
+
 
 async function fetchRealNews(){
  // 尝试直接fetch东方财富快讯（可能CORS失败）
